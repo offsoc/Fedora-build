@@ -1,4 +1,36 @@
 #!/bin/bash
+#
+# =============================================================================
+# Script Name: build-fedora-image.sh
+# Description: A script to build and customize Fedora installation images.
+# Author: offsec
+# Company: offsec.com
+# Contact: offapt@gmail.com
+# Created: 20240904
+# Version: v2.0
+# License: GPL
+# =============================================================================
+#
+# This script automates the process of building and customizing Fedora images.
+# It supports creating Live, Standard, Netinstall, Cloud, CoreOS, and Server images.
+#
+# Usage:
+#   ./build-fedora-image.sh [options]
+#
+# Options:
+#   -t, --type <image-type>       Specify the type of image to build (live, standard, netinstall, cloud, coreos, server).
+#   -d, --desktop <environment>   Specify the desktop environment (GNOME, KDE, XFCE) for live and netinstall types.
+#   -r, --release <version>       Specify the Fedora release version (default is 40).
+#   -p, --repo-path <dir>         Specify the local repository path for netinstall images.
+#   -f, --cloud-format <format>   Specify the format for cloud images (raw, vhd, qcow2, virtualbox, ova).
+#   -v, --system-version <version> Specify the system version (standard, lot, cloud, coreos, server).
+#   -o, --output-dir <dir>        Specify the output directory for the built images.
+#   -l, --log-file <file>         Specify the log file path.
+#   -h, --help                    Show this help message and exit.
+#
+# =============================================================================
+
+# Your script logic starts here
 
 # 默认参数
 ISO_OUTPUT_DIR=~/custom-fedora-images
