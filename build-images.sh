@@ -25,12 +25,9 @@
 
 # Your script logic starts here
 
-# 输入KS_FILE文件的绝对路径
-read
 # 默认参数
 ISO_OUTPUT_DIR=~/custom-fedora-images
 RELEASE_VERSION=40
-KS_FILE=~/custom-fedora.ks
 REPO_URL="https://pagure.io/forks/offsec/fedora-kickstarts.git"
 REPO_DIR="/tmp/fedora-kickstarts"
 VOL_ID="Custom_Fedora"
@@ -43,6 +40,10 @@ CLOUD_FORMATS=("raw" "vhd" "qcow2" "virtualbox" "ova")
 SYSTEM_TYPE="standard"
 SYSTEM_VERSIONS=("standard" "lot" "cloud" "coreos" "server")
 BUILD_THREADS=$(nproc)  # 自动获取可用CPU核心数
+
+# 获取用户输入的 Kickstart 文件路径
+echo "请输入 Kickstart 文件的绝对路径："
+read -r KS_FILE
 
 # 监控系统资源
 function monitor_system() {
