@@ -184,6 +184,7 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
+                --resultdir /var/lmc \
                 --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
             ;;
         standard)
@@ -195,6 +196,7 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
+                --resultdir /var/lmc \
                 --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
             ;;
         netinstall)
@@ -208,6 +210,7 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
+                --resultdir /var/lmc \
                 --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
             ;;
         iot)
@@ -221,6 +224,7 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
+                --resultdir /var/lmc \
                 --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
             ;;
         cloud)
@@ -234,6 +238,7 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
+                --resultdir /var/lmc \
                 --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
 
             echo "转换 Cloud 镜像为不同格式..." | tee -a "$LOG_FILE"
@@ -250,6 +255,7 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
+                --resultdir /var/lmc \
                 --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
             ;;
         server)
@@ -263,6 +269,7 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
+                --resultdir /var/lmc \
                 --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
             ;;
         *)
