@@ -25,6 +25,8 @@
 
 # Your script logic starts here
 
+# 输入KS_FILE文件的绝对路径
+read
 # 默认参数
 ISO_OUTPUT_DIR=~/custom-fedora-images
 RELEASE_VERSION=40
@@ -133,22 +135,56 @@ function generate_iso_name() {
 # 下载并切换到正确的Kickstart分支
 function setup_kickstarts() {
     echo "从 $REPO_URL 下载 Kickstart 文件..." | tee -a "$LOG_FILE"
+
+    # 删除旧的存储库目录
     if [ -d "$REPO_DIR" ]; then
         rm -rf "$REPO_DIR"
     fi
-    git clone "$REPO_URL" "$REPO_DIR" | tee -a "$LOG_FILE"
-    cd "$REPO_DIR" || { echo "无法进入目录 $REPO_DIR"; exit 1; }
-    local branch="F${RELEASE_VERSION}"
-    if git rev-parse --verify "$branch" &> /dev/null; then
+
+    # 克隆新的存储库
+    if ! git clone "$REPO_URL" "$REPO_DIR" | tee -a "$LOG_FILE"; then
+        echo "克隆存储库失败: $REPO_URL" | tee -a "$LOG_FILE"
+        exit 1
+    fi
+
+    # 检查克隆后的目录是否存在
+    if [ ! -d "$REPO_DIR" ]; then
+        echo "克隆操作未成功，目录 $REPO_DIR 不存在。" | tee -a "$LOG_FILE"
+        exit 1
+    fi
+
+    # 进入克隆的存储库目录
+     if ! cd "$REPO_DIR"; then
+        echo "错误: 无法进入目录 $REPO_DIR。" | tee -a "$LOG_FILE"
+        exit 1
+    fi
+
+    # 列出所有分支并显示
+    echo "可用的分支列表:" | tee -a "$LOG_FILE"
+    git branch -r | tee -a "$LOG_FILE"
+
+    # 切换到对应的分支
+    local branch="origin/f${RELEASE_VERSION}" # 使用小写的分支名称
+    if git show-ref --verify --quiet "refs/remotes/$branch"; then
         echo "切换到分支 $branch..." | tee -a "$LOG_FILE"
-        git checkout "$branch" | tee -a "$LOG_FILE"
+        git checkout -b "f${RELEASE_VERSION}" "$branch" | tee -a "$LOG_FILE"
     else
         echo "分支 $branch 不存在." | tee -a "$LOG_FILE"
         exit 1
     fi
-    cp *.ks /usr/share/kickstarts/
-}
+    # 创建目标目录（如果不存在）
+    if [ ! -d "/usr/share/kickstarts/" ]; then
+	    echo "创建目录 /usr/share/kickstarts/ ..." | tee -a "$LOG_FILE"
+	    sudo mkdir -p /usr/share/kickstarts/ || { echo "无法创建目录 /usr/share/kickstarts/"; exit 1; }
+    fi
 
+
+    # 复制 Kickstart 文件
+    if ! cp *.ks /usr/share/kickstarts/; then
+        echo "复制 Kickstart 文件失败。" | tee -a "$LOG_FILE"
+        exit 1
+    fi
+}
 # 为指定的镜像格式生成 Cloud 镜像
 function convert_cloud_image() {
     local image_path="$1"
