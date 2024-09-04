@@ -234,7 +234,6 @@ function build_image() {
         standard)
             iso_name=$(generate_iso_name "Standard" "$SYSTEM_VERSION")
             echo "构建标准安装镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/kickstarts/fedora-standard.ks "$KS_FILE"
             mkksiso --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -247,7 +246,6 @@ function build_image() {
         netinstall)
             iso_name=$(generate_iso_name "Netinstall" "$SYSTEM_VERSION")
             echo "构建网络安装镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/kickstarts/fedora-netinstall.ks "$KS_FILE"
             mkksiso --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -260,7 +258,6 @@ function build_image() {
         iot)
             iso_name=$(generate_iso_name "IoT" "$SYSTEM_VERSION")
             echo "构建 IoT 镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/kickstarts/fedora-iot.ks "$KS_FILE"
             mkksiso --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -273,7 +270,6 @@ function build_image() {
         cloud)
             iso_name=$(generate_iso_name "Cloud" "$SYSTEM_VERSION")
             echo "构建 Cloud 镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/kickstarts/fedora-cloud.ks "$KS_FILE"
             mkksiso --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -289,7 +285,6 @@ function build_image() {
         coreos)
             iso_name=$(generate_iso_name "CoreOS" "$SYSTEM_VERSION")
             echo "构建 CoreOS 版本镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/kickstarts/fedora-coreos.ks "$KS_FILE"
             mkksiso --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -302,7 +297,6 @@ function build_image() {
         server)
             iso_name=$(generate_iso_name "Server" "$SYSTEM_VERSION")
             echo "构建 Server 镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/kickstarts/fedora-server.ks "$KS_FILE"
             mkksiso --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
