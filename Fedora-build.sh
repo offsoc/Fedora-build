@@ -29,6 +29,7 @@
 #   -h, --help                    Show this help message and exit.
 #
 # =============================================================================
+# livemedia-creator --ks /home/offsec/Fedora-build/fedora-kickstarts/fedora-live-workstation.ks  --no-virt --resultdir /var/lmc --project fedora-live-workstation --make-iso --iso-only --iso-name fedora-live-workstation-41-x86_64.iso --releasever 41 --macboot
 
 # Your script logic starts here
 
