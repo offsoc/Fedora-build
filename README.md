@@ -1,4 +1,7 @@
 # Fedora-build
+```shll
+livemedia-creator --ks Fedora-kickstarts/fedora-live-workstation.ks  --make-iso --no-virt  --resultdir /var/lmc --project Fedora-Live-Workstation  --volid Fedora-Live-Workstation-41 --iso-only --iso-name Fedora-Live-Workstation-41-x86_64.iso --releasever 41 --macboot
+```
 ## build-fedora-image
 脚本的可用性、编译效率，并完善日志监控和磁盘网络情况监控，我们可以进行以下改进：
 引入更细粒度的日志记录，包括编译过程中的每一步。
