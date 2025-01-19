@@ -11,6 +11,7 @@ livemedia-creator --ks Fedora-kickstarts/fedora-live-workstation.ks  --make-iso 
 ### 使用方法
 
 ```bash
+dnf install lorax
 ./build-fedora-image.sh [选项]
 ```
 
