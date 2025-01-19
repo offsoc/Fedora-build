@@ -2,6 +2,9 @@
 ```shll
 livemedia-creator --ks Fedora-kickstarts/fedora-live-workstation.ks  --make-iso --no-virt  --resultdir /var/lmc --project Fedora-Live-Workstation  --volid Fedora-Live-Workstation-41 --iso-only --iso-name Fedora-Live-Workstation-41-x86_64.iso --releasever 41 --macboot
 ```
+```shell
+livemedia-creator --ks kickstarts/fedora-live-workstation.ks  --make-iso --no-virt  --resultdir /var/lmc --project Fedora-Live-Workstation  --volid Fedora-Live-Workstation-42 --iso-only --iso-name Fedora-Live-Workstation-42-x86_64.iso --releasever 42 --macboot
+```
 以下是对脚本的分析、使用方法以及如何满足 `livemedia-creator` 命令的需求。
 
 ### 脚本分析
