@@ -61,7 +61,6 @@ gnome-keyring-pam
 -binwalk
 -bkhive
 -bonesi
--bro
 -cmospwd
 -dnstop
 -etherape
@@ -79,7 +78,6 @@ gnome-keyring-pam
 -pdfcrack
 -proxychains
 -pyrit
--raddump
 -rkhunter
 -safecopy
 -samdump2

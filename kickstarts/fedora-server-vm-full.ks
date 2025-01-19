@@ -162,6 +162,10 @@ if [[ $arch == "aarch64" ]] || [[ $arch == "armv7l" ]]; then
  sed -i -e 's|console=tty0||g' /boot/loader/entries/*conf
 fi
 
+# Trigger lvm-devices-import.path and .service to create
+# a new /etc/lvm/devices/system.devices for the root VG.
+rm -f /etc/lvm/devices/system.devices
+touch /etc/lvm/devices/auto-import-rootvg
 
 # Remove machine-id on pre generated images
 rm -f /etc/machine-id

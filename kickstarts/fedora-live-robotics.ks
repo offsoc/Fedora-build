@@ -1,6 +1,6 @@
-# Maintained by x3mboy and the Fedora Robotics SIG:
-# https://fedoraproject.org/wiki/SIGs/Robotics
-# mailto:x3mboy@fedoraproject.org
+# Maintained by lrossett and the Fedora Robotics SIG:
+# https://docs.fedoraproject.org/en-US/robotics-sig/
+# mailto:lrossett@redhat.com
 # mailto:robotics@lists.fedoraproject.org
 
 %include fedora-live-base.ks

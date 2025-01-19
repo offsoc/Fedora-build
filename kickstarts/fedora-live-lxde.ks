@@ -10,6 +10,9 @@
 %include fedora-live-minimization.ks
 %include fedora-lxde-common.ks
 
+# increate the disk size for compose
+part / --size 6144
+
 %post
 # LXDE and LXDM configuration
 

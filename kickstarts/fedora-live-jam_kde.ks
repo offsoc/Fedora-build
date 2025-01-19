@@ -12,7 +12,7 @@
 %include fedora-live-kde.ks
 
 # DVD size partition
-part / --size 10240 --fstype ext4
+part / --size 11264 --fstype ext4
 
 #enable threaded irqs
 bootloader --append="threadirqs"

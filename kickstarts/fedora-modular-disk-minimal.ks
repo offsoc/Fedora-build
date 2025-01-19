@@ -31,7 +31,7 @@ coreutils-single
 util-linux
 rpm
 shadow-utils
-microdnf
+dnf5
 glibc-minimal-langpack
 grubby
 kernel

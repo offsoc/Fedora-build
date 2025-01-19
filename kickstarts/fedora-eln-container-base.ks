@@ -10,9 +10,10 @@ fedora-repos-eln
 rootfiles
 tar # https://bugzilla.redhat.com/show_bug.cgi?id=1409920
 vim-minimal
-dnf
-dnf-yum  # https://fedorahosted.org/fesco/ticket/1312#comment:29
-python3-dnf-plugins-core # https://github.com/fedora-eln/eln/issues/166
+
+dnf5
+dnf5-plugins
+
 sudo
 -glibc-langpack-en
 -langpacks-en

@@ -13,6 +13,8 @@
 
 # Maintainer: Christian Dersch <lupinix@fedoraproject.org>
 #             https://fedoraproject.org/wiki/User:Lupinix
+# Co-Maintainer: JT Pennington <q5sys@fedoraproject.org>
+#             https://fedoraproject.org/wiki/User:q5sys
 
 %include fedora-live-kde-base.ks
 %include fedora-live-minimization.ks
@@ -33,7 +35,7 @@ part / --size 16000
 astrometry
 astrometry-tycho2
 cdsclient
-fpack
+cfitsio-utils
 psfex
 scamp
 sextractor

@@ -10,10 +10,11 @@
 #
 #include snippets/packagekit-cached-metadata.ks
 
-part / --size 8192
+part / --size 8576
 
 %packages
 gnome-initial-setup
+anaconda-webui
 %end
 
 %post

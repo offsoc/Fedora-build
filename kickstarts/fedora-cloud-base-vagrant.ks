@@ -22,12 +22,6 @@ rootpw vagrant
 bootloader --timeout=1 --location=mbr --append="no_timer_check console=tty1 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0"
 
 %packages
-# The default koji Vagrantfile configuration uses rsync to sync files between
-# the vagrant host and the guest.  It uses yum to verify that rsync is present
-# and/or install it if it is not.  It will fail without adding the yum compat
-# layer for dnf
-# TODO: Teach vagrant about dnf
-dnf-yum
 # rsync gets installed when the Vagrant box is first launched on the
 # users setup. This can actually take a bit of time.  Just fold it
 # in to the base box disk image

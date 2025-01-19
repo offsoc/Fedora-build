@@ -5,10 +5,10 @@
 # Description: A script to build and customize Fedora installation images.
 # Author: offsec
 # Company: offsec.com
-# Contact: offapt@gmail.com
-# Created: 20240904
-# Version: v2.0
-# License: GPL
+# Contact: apt@gmail.com
+# Created: 20250119
+# Version: v3.1
+# License: GPL2.0
 # =============================================================================
 #
 # This script automates the process of building and customizing Fedora images.
@@ -20,33 +20,23 @@
 # Options:
 #   -t, --type <image-type>       Specify the type of image to build (live, standard, netinstall, cloud, coreos, server).
 #   -d, --desktop <environment>   Specify the desktop environment (GNOME, KDE, XFCE) for live and netinstall types.
-#   -r, --release <version>       Specify the Fedora release version (default is 40).
+#   -r, --release <version>       Specify the Fedora release version.
 #   -p, --repo-path <dir>         Specify the local repository path for netinstall images.
 #   -f, --cloud-format <format>   Specify the format for cloud images (raw, vhd, qcow2, virtualbox, ova).
 #   -v, --system-version <version> Specify the system version (standard, lot, cloud, coreos, server).
 #   -o, --output-dir <dir>        Specify the output directory for the built images.
 #   -l, --log-file <file>         Specify the log file path.
 #   -h, --help                    Show this help message and exit.
-#
+#   -r, --resultdir <dir>         Specify the result directory for the built images.
+#   --ks-file <file>              Specify the kickstart file.
+#   --vol-id <id>                 Specify the volume ID.
+#   --project-name <name>         Specify the project name.
+#  livemedia-creator --ks Fedora-kickstarts/fedora-live-workstation.ks  --make-iso --no-virt  --resultdir /var/lmc --project Fedora-Live-Workstation  --volid Fedora-Live-Workstation-41 --iso-only --iso-name Fedora-Live-Workstation-41-x86_64.iso --releasever 41 --macboot
+#  sudo ./build-fedora-image.sh --type live --release 40 --output-dir /path/to/output --resultdir /path/to/result --ks-file /path/to/kickstart.ks --vol-id Fedora-Live --project-name "Fedora Live Project"
 # =============================================================================
-# livemedia-creator --ks /home/offsec/Fedora-build/fedora-kickstarts/fedora-live-workstation.ks  --no-virt --resultdir /var/lmc --project fedora-live-workstation --make-iso --iso-only --iso-name fedora-live-workstation-41-x86_64.iso --releasever 41 --macboot
-
-# Your script logic starts here
 
 # 默认参数
-ISO_OUTPUT_DIR=~/custom-fedora-images
-RELEASE_VERSION=40
-KS_FILE=~/custom-fedora.ks
-REPO_PATH=""
-VOL_ID="Custom_Fedora"
-PROJECT_NAME="Custom Fedora OS"
 LOG_FILE=~/fedora_image_build.log
-DESKTOP_ENVIRONMENTS=("GNOME")
-IMAGE_TYPE="live"
-CLOUD_FORMAT="raw"
-CLOUD_FORMATS=("raw" "vhd" "qcow2" "virtualbox" "ova")
-SYSTEM_TYPE="standard"
-SYSTEM_VERSIONS=("standard" "lot" "cloud" "coreos" "server")
 BUILD_THREADS=$(nproc)  # 自动获取可用CPU核心数
 
 # 监控系统资源
@@ -70,18 +60,21 @@ function show_help() {
     echo ""
     echo "选项:"
     echo "  -t, --type <image-type>        指定镜像类型 (live, standard, netinstall, iot, cloud, coreos, server)"
-    echo "  -o, --output-dir <dir>         指定ISO输出目录 (默认: $ISO_OUTPUT_DIR)"
-    echo "  -n, --iso-name <name>          指定输出ISO文件名 (默认: 按桌面环境和系统版本生成)"
-    echo "  -r, --release <version>        指定Fedora版本 (默认: $RELEASE_VERSION)"
-    echo "  -p, --repo-path <dir>          指定本地仓库路径 (默认: 不使用)"
-    echo "  -d, --desktop <environment>    指定桌面环境 (GNOME, KDE, XFCE) (仅网络安装镜像使用)"
-    echo "  -f, --cloud-format <format>    指定云镜像格式 (raw, vhd, qcow2, virtualbox, ova) (仅云镜像使用)"
+    echo "  -o, --output-dir <dir>         指定ISO输出目录"
+    echo "  -n, --iso-name <name>          指定输出ISO文件名,例如Fedora-Live-Workstation-41-x86_64.iso"
+    echo "  -r, --release <version>        指定Fedora版本,例如40、41、42"
+    echo "  -p, --repo-path <dir>          指定本地仓库路径"
+    echo "  -d, --desktop <environment>    指定桌面环境 (GNOME, KDE, XFCE)"
+    echo "  -f, --cloud-format <format>    指定云镜像格式 (raw, vhd, qcow2, virtualbox, ova)"
     echo "  -s, --system-type <type>       指定系统定制类型 (standard, lot, cloud, coreos, server)"
     echo "  -v, --system-version <version> 指定系统版本 (standard, lot, cloud, coreos, server)"
-    echo "  -l, --log-file <file>          指定日志文件路径 (默认: $LOG_FILE)"
+    echo "  -l, --log-file <file>          指定日志文件路径"
     echo "  -h, --help                     显示帮助信息"
+    echo "  -r, --resultdir <dir>          指定结果目录 (必需),默认/var/lmc"
+    echo "  --ks-file <file>               指定kickstart文件路径"
+    echo "  --vol-id <id>                  指定卷ID,例如Fedora-Live-Workstation-41"
+    echo "  --project-name <name>          指定项目名称,例如Fedora-Live-Workstation"
 }
-
 # 解析命令行参数
 function parse_args() {
     while [[ "$#" -gt 0 ]]; do
@@ -96,11 +89,21 @@ function parse_args() {
             -s|--system-type) SYSTEM_TYPE="$2"; shift ;;
             -v|--system-version) SYSTEM_VERSION="$2"; shift ;;
             -l|--log-file) LOG_FILE="$2"; shift ;;
+            -r|--resultdir) RESULT_DIR="$2"; shift ;;
+            --ks-file) KS_FILE="$2"; shift ;;
+            --vol-id) VOL_ID="$2"; shift ;;
+            --project-name) PROJECT_NAME="$2"; shift ;;
             -h|--help) show_help; exit 0 ;;
             *) echo "未知选项: $1"; show_help; exit 1 ;;
         esac
         shift
     done
+
+    if [ -z "$RESULT_DIR" ]; then
+        echo "错误: 必须指定结果目录 (--resultdir)" | tee -a "$LOG_FILE"
+        show_help
+        exit 1
+    fi
 }
 
 # 检查是否以root权限运行
@@ -185,8 +188,9 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
-                --resultdir /var/lmc \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
+                --resultdir "$RESULT_DIR" \
+                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
+                --macboot | tee -a "$LOG_FILE"
             ;;
         standard)
             iso_name=$(generate_iso_name "Standard" "$SYSTEM_VERSION")
@@ -197,13 +201,13 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
-                --resultdir /var/lmc \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
+                --resultdir "$RESULT_DIR" \
+                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
+                --macboot | tee -a "$LOG_FILE"
             ;;
         netinstall)
             iso_name=$(generate_iso_name "Netinstall" "$SYSTEM_VERSION")
             echo "构建网络安装镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/spin-kickstarts/fedora-netinstall.ks "$KS_FILE"
             livemedia-creator --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -211,13 +215,13 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
-                --resultdir /var/lmc \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
+                --resultdir "$RESULT_DIR" \
+                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
+                --macboot | tee -a "$LOG_FILE"
             ;;
         iot)
             iso_name=$(generate_iso_name "IoT" "$SYSTEM_VERSION")
             echo "构建 IoT 镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/spin-kickstarts/fedora-iot.ks "$KS_FILE"
             livemedia-creator --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -225,13 +229,13 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
-                --resultdir /var/lmc \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
+                --resultdir "$RESULT_DIR" \
+                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
+                --macboot | tee -a "$LOG_FILE"
             ;;
         cloud)
             iso_name=$(generate_iso_name "Cloud" "$SYSTEM_VERSION")
             echo "构建 Cloud 镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/spin-kickstarts/fedora-cloud.ks "$KS_FILE"
             livemedia-creator --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -239,8 +243,9 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
-                --resultdir /var/lmc \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
+                --resultdir "$RESULT_DIR" \
+                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
+                --macboot | tee -a "$LOG_FILE"
 
             echo "转换 Cloud 镜像为不同格式..." | tee -a "$LOG_FILE"
             convert_cloud_image "$ISO_OUTPUT_DIR/$iso_name"
@@ -248,7 +253,6 @@ function build_image() {
         coreos)
             iso_name=$(generate_iso_name "CoreOS" "$SYSTEM_VERSION")
             echo "构建 CoreOS 版本镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/spin-kickstarts/fedora-coreos.ks "$KS_FILE"
             livemedia-creator --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -256,13 +260,13 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
-                --resultdir /var/lmc \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
+                --resultdir "$RESULT_DIR" \
+                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
+                --macboot | tee -a "$LOG_FILE"
             ;;
         server)
             iso_name=$(generate_iso_name "Server" "$SYSTEM_VERSION")
             echo "构建 Server 镜像..." | tee -a "$LOG_FILE"
-            cp /usr/share/spin-kickstarts/fedora-server.ks "$KS_FILE"
             livemedia-creator --ks "$KS_FILE" \
                 --make-iso \
                 --no-virt \
@@ -270,8 +274,9 @@ function build_image() {
                 --releasever "$RELEASE_VERSION" \
                 --volid "$VOL_ID" \
                 --iso-only \
-                --resultdir /var/lmc \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" | tee -a "$LOG_FILE"
+                --resultdir "$RESULT_DIR" \
+                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
+                --macboot | tee -a "$LOG_FILE"
             ;;
         *)
             echo "错误: 不支持的镜像类型 $IMAGE_TYPE" | tee -a "$LOG_FILE"

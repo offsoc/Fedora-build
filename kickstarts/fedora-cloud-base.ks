@@ -31,8 +31,7 @@ rootpw --lock --iscrypted locked
 
 firewall --disabled
 
-# We pass net.ifnames=0 because we always want to use eth0 here on all the cloud images.
-bootloader --timeout=1 --location=mbr --append="no_timer_check net.ifnames=0 console=tty1 console=ttyS0,115200n8"
+bootloader --timeout=1 --location=mbr --append="no_timer_check console=tty1 console=ttyS0,115200n8"
 
 services --enabled=sshd,cloud-init,cloud-init-local,cloud-config,cloud-final
 

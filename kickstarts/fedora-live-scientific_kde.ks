@@ -12,7 +12,7 @@
 %include fedora-live-minimization.ks
 %include fedora-scientific-common.ks
 
-part / --size 17000
+part / --size 18000
 
 %post
 

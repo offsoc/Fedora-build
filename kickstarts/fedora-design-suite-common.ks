@@ -6,8 +6,7 @@
 fedora-release-designsuite
 
 # Provides backup application
-deja-dup
-#deja-dup-nautilus
+#deja-dup
 
 # Add extra gnome applications
 #gnome-books

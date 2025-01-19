@@ -9,7 +9,7 @@
 # Don't show bootloader as it's impossible for the user to get to it in time
 # So we might as well not waste the 1 second on each boot.
 # https://cloud.google.com/compute/docs/import/import-existing-image
-bootloader --timeout=0 --location=mbr --append="no_timer_check net.ifnames=0 console=ttyS0,38400n8d"
+bootloader --timeout=0 --location=mbr --append="no_timer_check console=ttyS0,38400n8d"
 
 # redefine `services` here to drop cloud-init systemd unit enablements from
 # fedora-cloud-base.ks since we don't use them.
