@@ -30,6 +30,7 @@ gnome-shell-extension-vertical-workspaces
 gnome-shell-extension-workspace-indicator
 gnome-shell-extension-gsconnect
 -libreoffice*
+-unoconv
 -gnome-boxes
 -gnome-clocks 
 -gnome-maps 
