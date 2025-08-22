@@ -2,296 +2,206 @@
 #
 # =============================================================================
 # Script Name: build-fedora-image.sh
-# Description: A script to build and customize Fedora installation images.
+# Description: Ultimate Fedora image builder with full automation and Cloud conversion
 # Author: offsec
-# Company: offsec.com
-# Contact: apt@gmail.com
-# Created: 20250119
-# Version: v3.1
-# License: GPL2.0
-# =============================================================================
-#
-# This script automates the process of building and customizing Fedora images.
-# It supports creating Live, Standard, Netinstall, Cloud, CoreOS, and Server images.
-#
-# Usage:
-#   ./build-fedora-image.sh [options]
-#
-# Options:
-#   -t, --type <image-type>       Specify the type of image to build (live, standard, netinstall, cloud, coreos, server).
-#   -d, --desktop <environment>   Specify the desktop environment (GNOME, KDE, XFCE) for live and netinstall types.
-#   -r, --release <version>       Specify the Fedora release version.
-#   -p, --repo-path <dir>         Specify the local repository path for netinstall images.
-#   -f, --cloud-format <format>   Specify the format for cloud images (raw, vhd, qcow2, virtualbox, ova).
-#   -v, --system-version <version> Specify the system version (standard, lot, cloud, coreos, server).
-#   -o, --output-dir <dir>        Specify the output directory for the built images.
-#   -l, --log-file <file>         Specify the log file path.
-#   -h, --help                    Show this help message and exit.
-#   -r, --resultdir <dir>         Specify the result directory for the built images.
-#   --ks-file <file>              Specify the kickstart file.
-#   --vol-id <id>                 Specify the volume ID.
-#   --project-name <name>         Specify the project name.
-#  livemedia-creator --ks Fedora-kickstarts/fedora-live-workstation.ks  --make-iso --no-virt  --resultdir /var/lmc --project Fedora-Live-Workstation  --volid Fedora-Live-Workstation-41 --iso-only --iso-name Fedora-Live-Workstation-41-x86_64.iso --releasever 41 --macboot
-#  sudo ./build-fedora-image.sh --type live --release 40 --output-dir /path/to/output --resultdir /path/to/result --ks-file /path/to/kickstart.ks --vol-id Fedora-Live --project-name "Fedora Live Project"
 # =============================================================================
 
-# 默认参数
 LOG_FILE=~/fedora_image_build.log
-BUILD_THREADS=$(nproc)  # 自动获取可用CPU核心数
+BUILD_THREADS=$(nproc)
+RESULT_DIR="/var/lmc"
+ISO_OUTPUT_DIR="$PWD/output"
+RELEASE_VERSION="44"
+IMAGE_TYPES=()  # Supports multiple types
+DESKTOP_ENVIRONMENT="Workstation"
+ISO_NAME=""
+VOL_ID=""
+PROJECT_NAME=""
+KS_FILE=""
+CLOUD_FORMATS=("raw" "qcow2" "vhd" "virtualbox" "ova")
+RETRY_COUNT=2
 
-# 监控系统资源
-function monitor_system() {
-    echo "监控系统资源..." | tee -a "$LOG_FILE"
-    
-    echo "磁盘使用情况:" | tee -a "$LOG_FILE"
-    df -h | tee -a "$LOG_FILE"
-    
-    echo "网络带宽使用情况:" | tee -a "$LOG_FILE"
-    if command -v ifstat &> /dev/null; then
-        ifstat -i eth0 1 10 | tee -a "$LOG_FILE"
-    else
-        echo "未找到 ifstat，无法监控网络带宽使用情况。" | tee -a "$LOG_FILE"
-    fi
-}
-
-# 显示帮助信息
+# ================================
+# Display help
+# ================================
 function show_help() {
-    echo "用法: $0 [选项]"
-    echo ""
-    echo "选项:"
-    echo "  -t, --type <image-type>        指定镜像类型 (live, standard, netinstall, iot, cloud, coreos, server)"
-    echo "  -o, --output-dir <dir>         指定ISO输出目录"
-    echo "  -n, --iso-name <name>          指定输出ISO文件名,例如Fedora-Live-Workstation-41-x86_64.iso"
-    echo "  -r, --release <version>        指定Fedora版本,例如40、41、42"
-    echo "  -p, --repo-path <dir>          指定本地仓库路径"
-    echo "  -d, --desktop <environment>    指定桌面环境 (GNOME, KDE, XFCE)"
-    echo "  -f, --cloud-format <format>    指定云镜像格式 (raw, vhd, qcow2, virtualbox, ova)"
-    echo "  -s, --system-type <type>       指定系统定制类型 (standard, lot, cloud, coreos, server)"
-    echo "  -v, --system-version <version> 指定系统版本 (standard, lot, cloud, coreos, server)"
-    echo "  -l, --log-file <file>          指定日志文件路径"
-    echo "  -h, --help                     显示帮助信息"
-    echo "  -r, --resultdir <dir>          指定结果目录 (必需),默认/var/lmc"
-    echo "  --ks-file <file>               指定kickstart文件路径"
-    echo "  --vol-id <id>                  指定卷ID,例如Fedora-Live-Workstation-41"
-    echo "  --project-name <name>          指定项目名称,例如Fedora-Live-Workstation"
-}
-# 解析命令行参数
-function parse_args() {
-    while [[ "$#" -gt 0 ]]; do
-        case $1 in
-            -t|--type) IMAGE_TYPE="$2"; shift ;;
-            -o|--output-dir) ISO_OUTPUT_DIR="$2"; shift ;;
-            -n|--iso-name) ISO_NAME="$2"; shift ;;
-            -r|--release) RELEASE_VERSION="$2"; shift ;;
-            -p|--repo-path) REPO_PATH="$2"; shift ;;
-            -d|--desktop) DESKTOP_ENVIRONMENTS=("$2"); shift ;;
-            -f|--cloud-format) CLOUD_FORMAT="$2"; shift ;;
-            -s|--system-type) SYSTEM_TYPE="$2"; shift ;;
-            -v|--system-version) SYSTEM_VERSION="$2"; shift ;;
-            -l|--log-file) LOG_FILE="$2"; shift ;;
-            -r|--resultdir) RESULT_DIR="$2"; shift ;;
-            --ks-file) KS_FILE="$2"; shift ;;
-            --vol-id) VOL_ID="$2"; shift ;;
-            --project-name) PROJECT_NAME="$2"; shift ;;
-            -h|--help) show_help; exit 0 ;;
-            *) echo "未知选项: $1"; show_help; exit 1 ;;
-        esac
-        shift
-    done
+cat <<EOF
+Usage: $0 [options]
 
-    if [ -z "$RESULT_DIR" ]; then
-        echo "错误: 必须指定结果目录 (--resultdir)" | tee -a "$LOG_FILE"
-        show_help
-        exit 1
-    fi
+Options:
+  -t, --type <image-types>       Image types, supports multiple types separated by space: live cloud server coreos netinstall
+  -o, --output-dir <dir>         ISO output directory (default: ./output)
+  -r, --release <version>        Fedora release version (default: 44)
+  -d, --desktop <environment>    Desktop environment (default: Workstation)
+  --ks-file <file>               Kickstart file path (required)
+  --cloud-formats <list>         Cloud image formats, separated by space (default: raw qcow2 vhd virtualbox ova)
+  --project-name <name>          Project name (auto-generated)
+  --vol-id <id>                  Volume ID (auto-generated)
+  -h, --help                     Show this help message
+EOF
 }
 
-# 检查是否以root权限运行
+# ================================
+# Check root privileges
+# ================================
 function check_root() {
     if [ "$EUID" -ne 0 ]; then
-        echo "请使用root权限运行此脚本." | tee -a "$LOG_FILE"
+        echo "Please run this script as root." | tee -a "$LOG_FILE"
         exit 1
     fi
 }
 
-# 检查必要工具是否安装
+# ================================
+# Check required tools
+# ================================
 function check_tools() {
-    local tools=("dnf" "livemedia-creator" "reposync" "qemu-img" "VBoxManage" "df" "ifstat")
-    for tool in "${tools[@]}"; do
+    for tool in livemedia-creator df mkdir tee qemu-img VBoxManage; do
         if ! command -v $tool &> /dev/null; then
-            echo "错误: 未找到工具 $tool，请先安装它。" | tee -a "$LOG_FILE"
+            echo "Error: $tool not found. Please install it first." | tee -a "$LOG_FILE"
             exit 1
         fi
     done
 }
 
-# 检查输出目录
-function check_output_dir() {
-    if [ ! -d "$ISO_OUTPUT_DIR" ]; then
-        echo "创建输出目录 $ISO_OUTPUT_DIR" | tee -a "$LOG_FILE"
-        mkdir -p "$ISO_OUTPUT_DIR"
+# ================================
+# Parse command line arguments
+# ================================
+function parse_args() {
+    while [[ "$#" -gt 0 ]]; do
+        case $1 in
+            -t|--type) shift; IMAGE_TYPES=($@); break ;;
+            -o|--output-dir) ISO_OUTPUT_DIR="$2"; shift ;;
+            -r|--release) RELEASE_VERSION="$2"; shift ;;
+            -d|--desktop) DESKTOP_ENVIRONMENT="$2"; shift ;;
+            --ks-file) KS_FILE="$2"; shift ;;
+            --vol-id) VOL_ID="$2"; shift ;;
+            --project-name) PROJECT_NAME="$2"; shift ;;
+            --cloud-formats) shift; CLOUD_FORMATS=($@); break ;;
+            -h|--help) show_help; exit 0 ;;
+            *) echo "Unknown option: $1"; show_help; exit 1 ;;
+        esac
+        shift
+    done
+
+    if [ -z "$KS_FILE" ]; then
+        echo "Error: Kickstart file must be specified (--ks-file)" | tee -a "$LOG_FILE"
+        exit 1
     fi
 }
 
-# 生成ISO文件名
-function generate_iso_name() {
-    local desktop_env="$1"
-    local version="$2"
-    echo "${desktop_env}_${version}_Fedora_${RELEASE_VERSION}.iso"
+# ================================
+# Prepare output directories
+# ================================
+function prepare_output_dir() {
+    mkdir -p "$ISO_OUTPUT_DIR" "$RESULT_DIR"
 }
 
-# 为指定的镜像格式生成 Cloud 镜像
+# ================================
+# Generate ISO names, volume IDs, and project names
+# ================================
+function generate_names() {
+    for type in "${IMAGE_TYPES[@]}"; do
+        local default_name="Fedora-${DESKTOP_ENVIRONMENT}-${RELEASE_VERSION}-${type}.iso"
+        ISO_NAMES["$type"]=${ISO_NAME:-$default_name}
+        VOL_IDS["$type"]=${VOL_ID:-"Fedora-${DESKTOP_ENVIRONMENT}-${RELEASE_VERSION}-${type}"}
+        PROJECT_NAMES["$type"]=${PROJECT_NAME:-"Fedora-${DESKTOP_ENVIRONMENT}-${RELEASE_VERSION}-${type}"}
+    done
+}
+
+# ================================
+# Detect image type from kickstart
+# ================================
+function detect_image_type() {
+    local ks="$1"
+    if grep -iqE 'livecd|workstation' "$ks"; then echo "live"
+    elif grep -iqE 'server' "$ks"; then echo "server"
+    elif grep -iqE 'cloud' "$ks"; then echo "cloud"
+    elif grep -iqE 'iot|coreos' "$ks"; then echo "coreos"
+    else echo "standard"; fi
+}
+
+# ================================
+# Build ISO image
+# ================================
+function build_image() {
+    local type="$1"
+    local retry=0
+    while [ $retry -le $RETRY_COUNT ]; do
+        echo "Building $type image, attempt #$((retry+1))..." | tee -a "$LOG_FILE"
+        if livemedia-creator \
+            --ks "$KS_FILE" \
+            --make-iso \
+            --no-virt \
+            --resultdir "$RESULT_DIR" \
+            --project "${PROJECT_NAMES[$type]}" \
+            --volid "${VOL_IDS[$type]}" \
+            --iso-only \
+            --iso-name "$ISO_OUTPUT_DIR/${ISO_NAMES[$type]}" \
+            --releasever "$RELEASE_VERSION" \
+            --macboot | tee -a "$LOG_FILE"; then
+            echo "$type build succeeded: $ISO_OUTPUT_DIR/${ISO_NAMES[$type]}" | tee -a "$LOG_FILE"
+            break
+        else
+            echo "$type build failed, retrying..." | tee -a "$LOG_FILE"
+            retry=$((retry+1))
+        fi
+    done
+    if [ $retry -gt $RETRY_COUNT ]; then
+        echo "$type build failed, reached max retries $RETRY_COUNT" | tee -a "$LOG_FILE"
+        return 1
+    fi
+}
+
+# ================================
+# Convert Cloud images to different formats
+# ================================
 function convert_cloud_image() {
-    local image_path="$1"
+    local iso_path="$ISO_OUTPUT_DIR/${ISO_NAMES["cloud"]}"
+    [[ ! -f "$iso_path" ]] && return
+    echo "Starting Cloud image conversion..." | tee -a "$LOG_FILE"
     for format in "${CLOUD_FORMATS[@]}"; do
         {
             case $format in
-                raw)
-                    cp "$image_path" "${image_path%.iso}.raw" | tee -a "$LOG_FILE"
-                    ;;
-                vhd)
-                    qemu-img convert -f raw -O vpc "$image_path" "${image_path%.iso}.vhd" | tee -a "$LOG_FILE"
-                    ;;
-                qcow2)
-                    qemu-img convert -f raw -O qcow2 "$image_path" "${image_path%.iso}.qcow2" | tee -a "$LOG_FILE"
-                    ;;
-                virtualbox)
-                    VBoxManage convertfromraw "$image_path" "${image_path%.iso}.vdi" --format VDI | tee -a "$LOG_FILE"
-                    ;;
+                raw) cp "$iso_path" "${iso_path%.iso}.raw" ;;
+                qcow2) qemu-img convert -f raw -O qcow2 "$iso_path" "${iso_path%.iso}.qcow2" ;;
+                vhd) qemu-img convert -f raw -O vpc "$iso_path" "${iso_path%.iso}.vhd" ;;
+                virtualbox) VBoxManage convertfromraw "$iso_path" "${iso_path%.iso}.vdi" --format VDI ;;
                 ova)
-                    VBoxManage convertfromraw "$image_path" "${image_path%.iso}.vdi" --format VDI | tee -a "$LOG_FILE"
-                    VBoxManage import "${image_path%.iso}.ovf" --vsys 0 --cpus 2 --memory 2048 --network adapter1=nat | tee -a "$LOG_FILE"
+                    VBoxManage convertfromraw "$iso_path" "${iso_path%.iso}.vdi" --format VDI
+                    VBoxManage import "${iso_path%.iso}.ovf" --vsys 0 --cpus 2 --memory 2048 --network adapter1=nat
                     ;;
-                *)
-                    echo "未知的云镜像格式: $format" | tee -a "$LOG_FILE"
-                    ;;
+                *) echo "Unknown Cloud image format: $format" ;;
             esac
         } &
     done
     wait
+    echo "Cloud image conversion finished." | tee -a "$LOG_FILE"
 }
 
-# 构建镜像
-function build_image() {
-    local iso_name
-    case $IMAGE_TYPE in
-        live)
-            iso_name=$(generate_iso_name "${DESKTOP_ENVIRONMENTS[0]}" "$SYSTEM_VERSION")
-            echo "构建 Live 镜像..." | tee -a "$LOG_FILE"
-            echo "%packages" >> "$KS_FILE"
-            echo "@^gnome-desktop-environment" >> "$KS_FILE"
-            echo "%end" >> "$KS_FILE"
-            livemedia-creator --ks "$KS_FILE" \
-                --no-virt \
-                --make-iso \
-                --project "$PROJECT_NAME" \
-                --releasever "$RELEASE_VERSION" \
-                --volid "$VOL_ID" \
-                --iso-only \
-                --resultdir "$RESULT_DIR" \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
-                --macboot | tee -a "$LOG_FILE"
-            ;;
-        standard)
-            iso_name=$(generate_iso_name "Standard" "$SYSTEM_VERSION")
-            echo "构建标准安装镜像..." | tee -a "$LOG_FILE"
-            livemedia-creator --ks "$KS_FILE" \
-                --make-disk \
-                --project "$PROJECT_NAME" \
-                --releasever "$RELEASE_VERSION" \
-                --volid "$VOL_ID" \
-                --iso-only \
-                --resultdir "$RESULT_DIR" \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
-                --macboot | tee -a "$LOG_FILE"
-            ;;
-        netinstall)
-            iso_name=$(generate_iso_name "Netinstall" "$SYSTEM_VERSION")
-            echo "构建网络安装镜像..." | tee -a "$LOG_FILE"
-            livemedia-creator --ks "$KS_FILE" \
-                --make-iso \
-                --no-virt \
-                --project "$PROJECT_NAME Netinstall" \
-                --releasever "$RELEASE_VERSION" \
-                --volid "$VOL_ID" \
-                --iso-only \
-                --resultdir "$RESULT_DIR" \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
-                --macboot | tee -a "$LOG_FILE"
-            ;;
-        iot)
-            iso_name=$(generate_iso_name "IoT" "$SYSTEM_VERSION")
-            echo "构建 IoT 镜像..." | tee -a "$LOG_FILE"
-            livemedia-creator --ks "$KS_FILE" \
-                --make-iso \
-                --no-virt \
-                --project "$PROJECT_NAME IoT" \
-                --releasever "$RELEASE_VERSION" \
-                --volid "$VOL_ID" \
-                --iso-only \
-                --resultdir "$RESULT_DIR" \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
-                --macboot | tee -a "$LOG_FILE"
-            ;;
-        cloud)
-            iso_name=$(generate_iso_name "Cloud" "$SYSTEM_VERSION")
-            echo "构建 Cloud 镜像..." | tee -a "$LOG_FILE"
-            livemedia-creator --ks "$KS_FILE" \
-                --make-iso \
-                --no-virt \
-                --project "$PROJECT_NAME Cloud" \
-                --releasever "$RELEASE_VERSION" \
-                --volid "$VOL_ID" \
-                --iso-only \
-                --resultdir "$RESULT_DIR" \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
-                --macboot | tee -a "$LOG_FILE"
-
-            echo "转换 Cloud 镜像为不同格式..." | tee -a "$LOG_FILE"
-            convert_cloud_image "$ISO_OUTPUT_DIR/$iso_name"
-            ;;
-        coreos)
-            iso_name=$(generate_iso_name "CoreOS" "$SYSTEM_VERSION")
-            echo "构建 CoreOS 版本镜像..." | tee -a "$LOG_FILE"
-            livemedia-creator --ks "$KS_FILE" \
-                --make-iso \
-                --no-virt \
-                --project "$PROJECT_NAME CoreOS" \
-                --releasever "$RELEASE_VERSION" \
-                --volid "$VOL_ID" \
-                --iso-only \
-                --resultdir "$RESULT_DIR" \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
-                --macboot | tee -a "$LOG_FILE"
-            ;;
-        server)
-            iso_name=$(generate_iso_name "Server" "$SYSTEM_VERSION")
-            echo "构建 Server 镜像..." | tee -a "$LOG_FILE"
-            livemedia-creator --ks "$KS_FILE" \
-                --make-iso \
-                --no-virt \
-                --project "$PROJECT_NAME Server" \
-                --releasever "$RELEASE_VERSION" \
-                --volid "$VOL_ID" \
-                --iso-only \
-                --resultdir "$RESULT_DIR" \
-                --iso-name "$ISO_OUTPUT_DIR/$iso_name" \
-                --macboot | tee -a "$LOG_FILE"
-            ;;
-        *)
-            echo "错误: 不支持的镜像类型 $IMAGE_TYPE" | tee -a "$LOG_FILE"
-            exit 1
-            ;;
-    esac
-}
-
-# 主执行部分
+# ================================
+# Main execution
+# ================================
 check_root
 parse_args "$@"
 check_tools
-check_output_dir
-monitor_system
-build_image
+prepare_output_dir
 
-echo "构建过程完成。" | tee -a "$LOG_FILE"
-echo "输出目录: $ISO_OUTPUT_DIR" | tee -a "$LOG_FILE"
+# Detect image type if none specified
+if [ ${#IMAGE_TYPES[@]} -eq 0 ]; then
+    IMAGE_TYPES=($(detect_image_type "$KS_FILE"))
+fi
+
+declare -A ISO_NAMES
+declare -A VOL_IDS
+declare -A PROJECT_NAMES
+generate_names
+
+# Build all image types concurrently
+for type in "${IMAGE_TYPES[@]}"; do
+    build_image "$type" &
+done
+wait
+
+# Convert Cloud images
+[[ " ${IMAGE_TYPES[@]} " =~ " cloud " ]] && convert_cloud_image
+
+echo "All builds completed. Output directory: $ISO_OUTPUT_DIR" | tee -a "$LOG_FILE"
