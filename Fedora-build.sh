@@ -2,7 +2,7 @@
 #
 # =============================================================================
 # Script Name: build-fedora-image.sh
-# Description: Ultimate Fedora image builder with full automation and Cloud conversion
+# Description: Ultimate Fedora Image Builder supporting all official versions and desktops
 # Author: offsec
 # =============================================================================
 
@@ -10,15 +10,21 @@ LOG_FILE=~/fedora_image_build.log
 BUILD_THREADS=$(nproc)
 RESULT_DIR="/var/lmc"
 ISO_OUTPUT_DIR="$PWD/output"
-RELEASE_VERSION="44"
-IMAGE_TYPES=()  # Supports multiple types
-DESKTOP_ENVIRONMENT="Workstation"
+RELEASE_VERSION=""
+IMAGE_TYPES=()          # Multiple types
+DESKTOP_ENVIRONMENT=""   # Desktop environment
 ISO_NAME=""
 VOL_ID=""
 PROJECT_NAME=""
 KS_FILE=""
 CLOUD_FORMATS=("raw" "qcow2" "vhd" "virtualbox" "ova")
 RETRY_COUNT=2
+
+# ================================
+# Supported Fedora versions and desktops
+# ================================
+FEDORA_VERSIONS=("38" "39" "40" "41" "42" "43" "44" "45" "46" "47")
+DESKTOPS=("Workstation" "KDE" "XFCE" "LXQt" "LXDE" "MATE" "Cinnamon" "i3")
 
 # ================================
 # Display help
@@ -28,12 +34,12 @@ cat <<EOF
 Usage: $0 [options]
 
 Options:
-  -t, --type <image-types>       Image types, supports multiple types separated by space: live cloud server coreos netinstall
+  -t, --type <image-types>       Image types, space-separated: live cloud server coreos netinstall
   -o, --output-dir <dir>         ISO output directory (default: ./output)
-  -r, --release <version>        Fedora release version (default: 44)
+  -r, --release <version>        Fedora version (default: latest stable)
   -d, --desktop <environment>    Desktop environment (default: Workstation)
   --ks-file <file>               Kickstart file path (required)
-  --cloud-formats <list>         Cloud image formats, separated by space (default: raw qcow2 vhd virtualbox ova)
+  --cloud-formats <list>         Cloud image formats, space-separated (default: raw qcow2 vhd virtualbox ova)
   --project-name <name>          Project name (auto-generated)
   --vol-id <id>                  Volume ID (auto-generated)
   -h, --help                     Show this help message
@@ -63,6 +69,34 @@ function check_tools() {
 }
 
 # ================================
+# Validate Fedora version
+# ================================
+function validate_release() {
+    local valid=0
+    for v in "${FEDORA_VERSIONS[@]}"; do
+        [[ "$RELEASE_VERSION" == "$v" ]] && valid=1
+    done
+    if [[ $valid -eq 0 ]]; then
+        echo "Invalid Fedora version: $RELEASE_VERSION. Supported: ${FEDORA_VERSIONS[*]}" | tee -a "$LOG_FILE"
+        exit 1
+    fi
+}
+
+# ================================
+# Validate desktop environment
+# ================================
+function validate_desktop() {
+    local valid=0
+    for d in "${DESKTOPS[@]}"; do
+        [[ "$DESKTOP_ENVIRONMENT" == "$d" ]] && valid=1
+    done
+    if [[ $valid -eq 0 ]]; then
+        echo "Invalid desktop: $DESKTOP_ENVIRONMENT. Supported: ${DESKTOPS[*]}" | tee -a "$LOG_FILE"
+        exit 1
+    fi
+}
+
+# ================================
 # Parse command line arguments
 # ================================
 function parse_args() {
@@ -86,6 +120,11 @@ function parse_args() {
         echo "Error: Kickstart file must be specified (--ks-file)" | tee -a "$LOG_FILE"
         exit 1
     fi
+
+    [[ -z "$RELEASE_VERSION" ]] && RELEASE_VERSION="${FEDORA_VERSIONS[-1]}"  # default latest stable
+    [[ -z "$DESKTOP_ENVIRONMENT" ]] && DESKTOP_ENVIRONMENT="Workstation"
+    validate_release
+    validate_desktop
 }
 
 # ================================
